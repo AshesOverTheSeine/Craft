@@ -153,8 +153,29 @@ typedef struct {
     Block copy1;
 } Model;
 
+typedef struct {
+    char key_forward;
+    char key_backward;
+    char key_left;
+    char key_right;
+    char key_jump;
+    char key_fly;
+    char key_observe;
+    char key_observe_inset;
+    char key_item_next;
+    char key_item_prev;
+    char key_zoom;
+    char key_ortho;
+    char key_chat;
+    char key_command;
+    char key_sign;
+} Controls;
+
 static Model model;
 static Model *g = &model;
+
+Controls controls;
+Controls *c = &controls;
 
 int chunked(float x) {
     return floorf(roundf(x) / CHUNK_SIZE);
@@ -1673,7 +1694,7 @@ void render_signs(Attrib *attrib, Player *player) {
 }
 
 void render_sign(Attrib *attrib, Player *player) {
-    if (!g->typing || g->typing_buffer[0] != CRAFT_KEY_SIGN) {
+    if (!g->typing || g->typing_buffer[0] != c->key_sign) {
         return;
     }
     int x, y, z, face;
@@ -2211,7 +2232,7 @@ void on_key(GLFWwindow *window, int key, int scancode, int action, int mods) {
             }
             else {
                 g->typing = 0;
-                if (g->typing_buffer[0] == CRAFT_KEY_SIGN) {
+                if (g->typing_buffer[0] == c->key_sign) {
                     Player *player = g->players;
                     int x, y, z, face;
                     if (hit_test_face(player, &x, &y, &z, &face)) {
@@ -2247,7 +2268,7 @@ void on_key(GLFWwindow *window, int key, int scancode, int action, int mods) {
         }
     }
     if (!g->typing) {
-        if (key == CRAFT_KEY_FLY) {
+        if (key == c->key_fly) {
             g->flying = !g->flying;
         }
         if (key >= '1' && key <= '9') {
@@ -2256,19 +2277,19 @@ void on_key(GLFWwindow *window, int key, int scancode, int action, int mods) {
         if (key == '0') {
             g->item_index = 9;
         }
-        if (key == CRAFT_KEY_ITEM_NEXT) {
+        if (key == c->key_item_next) {
             g->item_index = (g->item_index + 1) % item_count;
         }
-        if (key == CRAFT_KEY_ITEM_PREV) {
+        if (key == c->key_item_prev) {
             g->item_index--;
             if (g->item_index < 0) {
                 g->item_index = item_count - 1;
             }
         }
-        if (key == CRAFT_KEY_OBSERVE) {
+        if (key == c->key_observe) {
             g->observe1 = (g->observe1 + 1) % g->player_count;
         }
-        if (key == CRAFT_KEY_OBSERVE_INSET) {
+        if (key == c->key_observe_inset) {
             g->observe2 = (g->observe2 + 1) % g->player_count;
         }
     }
@@ -2290,18 +2311,18 @@ void on_char(GLFWwindow *window, unsigned int u) {
         }
     }
     else {
-        if (u == CRAFT_KEY_CHAT) {
+        if (u == c->key_chat) {
             g->typing = 1;
             g->typing_buffer[0] = '\0';
         }
-        if (u == CRAFT_KEY_COMMAND) {
+        if (u == c->key_command) {
             g->typing = 1;
             g->typing_buffer[0] = '/';
             g->typing_buffer[1] = '\0';
         }
-        if (u == CRAFT_KEY_SIGN) {
+        if (u == c->key_sign) {
             g->typing = 1;
-            g->typing_buffer[0] = CRAFT_KEY_SIGN;
+            g->typing_buffer[0] = c->key_sign;
             g->typing_buffer[1] = '\0';
         }
     }
@@ -2415,12 +2436,12 @@ void handle_movement(double dt) {
     int sx = 0;
     if (!g->typing) {
         float m = dt * 1.0;
-        g->ortho = glfwGetKey(g->window, CRAFT_KEY_ORTHO) ? 64 : 0;
-        g->fov = glfwGetKey(g->window, CRAFT_KEY_ZOOM) ? 15 : 65;
-        if (glfwGetKey(g->window, CRAFT_KEY_FORWARD)) sz--;
-        if (glfwGetKey(g->window, CRAFT_KEY_BACKWARD)) sz++;
-        if (glfwGetKey(g->window, CRAFT_KEY_LEFT)) sx--;
-        if (glfwGetKey(g->window, CRAFT_KEY_RIGHT)) sx++;
+        g->ortho = glfwGetKey(g->window, c->key_ortho) ? 64 : 0;
+        g->fov = glfwGetKey(g->window, c->key_zoom) ? 15 : 65;
+        if (glfwGetKey(g->window, c->key_forward)) sz--;
+        if (glfwGetKey(g->window, c->key_backward)) sz++;
+        if (glfwGetKey(g->window, c->key_left)) sx--;
+        if (glfwGetKey(g->window, c->key_right)) sx++;
         if (glfwGetKey(g->window, GLFW_KEY_LEFT)) s->rx -= m;
         if (glfwGetKey(g->window, GLFW_KEY_RIGHT)) s->rx += m;
         if (glfwGetKey(g->window, GLFW_KEY_UP)) s->ry += m;
@@ -2583,11 +2604,39 @@ void reset_model() {
     g->time_changed = 1;
 }
 
+/*
+ * Allows the changing of keybindings 
+ */
+void change_binding(char key) {
+  switch(key) {
+    default:
+      printf("Invalid entry!\n");
+  }
+}
+
 int main(int argc, char **argv) {
     // INITIALIZATION //
     curl_global_init(CURL_GLOBAL_DEFAULT);
     srand(time(NULL));
     rand();
+
+    // CONTROLS INITIALIZATION //
+    // This allows the keys to be modified from their default constant values
+    c->key_forward = CRAFT_KEY_FORWARD;
+    c->key_backward = CRAFT_KEY_BACKWARD;
+    c->key_left = CRAFT_KEY_LEFT;
+    c->key_right = CRAFT_KEY_RIGHT;
+    c->key_jump = CRAFT_KEY_JUMP;
+    c->key_fly = CRAFT_KEY_FLY;
+    c->key_observe = CRAFT_KEY_OBSERVE;
+    c->key_observe_inset = CRAFT_KEY_OBSERVE_INSET;
+    c->key_item_next = CRAFT_KEY_ITEM_NEXT;
+    c->key_item_prev = CRAFT_KEY_ITEM_PREV;
+    c->key_zoom = CRAFT_KEY_ZOOM;
+    c->key_ortho = CRAFT_KEY_ORTHO;
+    c->key_chat = CRAFT_KEY_CHAT;
+    c->key_command = CRAFT_KEY_COMMAND;
+    c->key_sign = CRAFT_KEY_SIGN;
 
     // WINDOW INITIALIZATION //
     if (!glfwInit()) {
