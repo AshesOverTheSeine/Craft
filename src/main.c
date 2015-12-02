@@ -154,21 +154,21 @@ typedef struct {
 } Model;
 
 typedef struct {
-    char key_forward;
-    char key_backward;
-    char key_left;
-    char key_right;
-    char key_jump;
-    char key_fly;
-    char key_observe;
-    char key_observe_inset;
-    char key_item_next;
-    char key_item_prev;
-    char key_zoom;
-    char key_ortho;
-    char key_chat;
-    char key_command;
-    char key_sign;
+    int key_forward;
+    int key_backward;
+    int key_left;
+    int key_right;
+    int key_jump;
+    int key_fly;
+    int key_observe;
+    int key_observe_inset;
+    int key_item_next;
+    int key_item_prev;
+    int key_zoom;
+    int key_ortho;
+    int key_chat;
+    int key_command;
+    int key_sign;
 } Controls;
 
 static Model model;
@@ -2042,10 +2042,11 @@ void tree(Block *block) {
 void parse_command(const char *buffer, int forward) {
     char username[128] = {0};
     char token[128] = {0};
+    char key[128] = {0};        // The key to be assigned to the chosen control
     char server_addr[MAX_ADDR_LENGTH];
     int server_port = DEFAULT_PORT;
     char filename[MAX_PATH_LENGTH];
-    int radius, count, xc, yc, zc;
+    int radius, count, xc, yc, zc, action;
     if (sscanf(buffer, "/identity %128s %128s", username, token) == 2) {
         db_auth_set(username, token);
         add_message("Successfully imported identity token!");
@@ -2144,6 +2145,9 @@ void parse_command(const char *buffer, int forward) {
     else if (sscanf(buffer, "/cylinder %d", &radius) == 1) {
         cylinder(&g->block0, &g->block1, radius, 0);
     }
+    else if (sscanf(buffer, "/set %d %s", &action, key) == 2) {        // Takes command, value corresponding to the command, and the new key to be bound to
+        change_binding(action, key);
+    }
     else if (forward) {
         client_talk(buffer);
     }
@@ -2196,6 +2200,7 @@ void on_middle_click() {
 }
 
 void on_key(GLFWwindow *window, int key, int scancode, int action, int mods) {
+    printf("ON_KEY %i \n", key);       // DEBUG: See when this is called
     int control = mods & (GLFW_MOD_CONTROL | GLFW_MOD_SUPER);
     int exclusive =
         glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED;
@@ -2607,11 +2612,10 @@ void reset_model() {
 /*
  * Allows the changing of keybindings 
  */
-void change_binding(char key) {
-  switch(key) {
-    default:
-      printf("Invalid entry!\n");
-  }
+void change_binding(int action, char *key) {
+    printf("Changing binding to %s\n", key);
+    c->key_forward = key;   // Will have switch statement for each action but for now just testing on one
+    printf("New Key: %c\n", &c->key_forward);   // TODO: This shows something different from the key
 }
 
 int main(int argc, char **argv) {
@@ -2652,6 +2656,7 @@ int main(int argc, char **argv) {
     glfwSwapInterval(VSYNC);
     glfwSetInputMode(g->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetKeyCallback(g->window, on_key);
+    printf("HOW?\n");
     glfwSetCharCallback(g->window, on_char);
     glfwSetMouseButtonCallback(g->window, on_mouse_button);
     glfwSetScrollCallback(g->window, on_scroll);
@@ -2708,7 +2713,7 @@ int main(int argc, char **argv) {
     GLuint program;
 
     program = load_program(
-        "shaders/block_vertex.glsl", "shaders/block_fragment.glsl");
+            "shaders/block_vertex.glsl", "shaders/block_fragment.glsl");
     block_attrib.program = program;
     block_attrib.position = glGetAttribLocation(program, "position");
     block_attrib.normal = glGetAttribLocation(program, "normal");
@@ -2723,13 +2728,13 @@ int main(int argc, char **argv) {
     block_attrib.timer = glGetUniformLocation(program, "timer");
 
     program = load_program(
-        "shaders/line_vertex.glsl", "shaders/line_fragment.glsl");
+            "shaders/line_vertex.glsl", "shaders/line_fragment.glsl");
     line_attrib.program = program;
     line_attrib.position = glGetAttribLocation(program, "position");
     line_attrib.matrix = glGetUniformLocation(program, "matrix");
 
     program = load_program(
-        "shaders/text_vertex.glsl", "shaders/text_fragment.glsl");
+            "shaders/text_vertex.glsl", "shaders/text_fragment.glsl");
     text_attrib.program = program;
     text_attrib.position = glGetAttribLocation(program, "position");
     text_attrib.uv = glGetAttribLocation(program, "uv");
@@ -2738,7 +2743,7 @@ int main(int argc, char **argv) {
     text_attrib.extra1 = glGetUniformLocation(program, "is_sign");
 
     program = load_program(
-        "shaders/sky_vertex.glsl", "shaders/sky_fragment.glsl");
+            "shaders/sky_vertex.glsl", "shaders/sky_fragment.glsl");
     sky_attrib.program = program;
     sky_attrib.position = glGetAttribLocation(program, "position");
     sky_attrib.normal = glGetAttribLocation(program, "normal");
@@ -2753,7 +2758,7 @@ int main(int argc, char **argv) {
         strncpy(g->server_addr, argv[1], MAX_ADDR_LENGTH);
         g->server_port = argc == 3 ? atoi(argv[2]) : DEFAULT_PORT;
         snprintf(g->db_path, MAX_PATH_LENGTH,
-            "cache.%s.%d.db", g->server_addr, g->server_port);
+                "cache.%s.%d.db", g->server_addr, g->server_port);
     }
     else {
         g->mode = MODE_OFFLINE;
@@ -2911,11 +2916,11 @@ int main(int argc, char **argv) {
                 hour = hour % 12;
                 hour = hour ? hour : 12;
                 snprintf(
-                    text_buffer, 1024,
-                    "(%d, %d) (%.2f, %.2f, %.2f) [%d, %d, %d] %d%cm %dfps",
-                    chunked(s->x), chunked(s->z), s->x, s->y, s->z,
-                    g->player_count, g->chunk_count,
-                    face_count * 2, hour, am_pm, fps.fps);
+                        text_buffer, 1024,
+                        "(%d, %d) (%.2f, %.2f, %.2f) [%d, %d, %d] %d%cm %dfps",
+                        chunked(s->x), chunked(s->z), s->x, s->y, s->z,
+                        g->player_count, g->chunk_count,
+                        face_count * 2, hour, am_pm, fps.fps);
                 render_text(&text_attrib, ALIGN_LEFT, tx, ty, ts, text_buffer);
                 ty -= ts * 2;
             }
@@ -2924,7 +2929,7 @@ int main(int argc, char **argv) {
                     int index = (g->message_index + i) % MAX_MESSAGES;
                     if (strlen(g->messages[index])) {
                         render_text(&text_attrib, ALIGN_LEFT, tx, ty, ts,
-                            g->messages[index]);
+                                g->messages[index]);
                         ty -= ts * 2;
                     }
                 }
@@ -2937,13 +2942,13 @@ int main(int argc, char **argv) {
             if (SHOW_PLAYER_NAMES) {
                 if (player != me) {
                     render_text(&text_attrib, ALIGN_CENTER,
-                        g->width / 2, ts, ts, player->name);
+                            g->width / 2, ts, ts, player->name);
                 }
                 Player *other = player_crosshair(player);
                 if (other) {
                     render_text(&text_attrib, ALIGN_CENTER,
-                        g->width / 2, g->height / 2 - ts - 24, ts,
-                        other->name);
+                            g->width / 2, g->height / 2 - ts - 24, ts,
+                            other->name);
                 }
             }
 
@@ -2978,7 +2983,7 @@ int main(int argc, char **argv) {
                 glClear(GL_DEPTH_BUFFER_BIT);
                 if (SHOW_PLAYER_NAMES) {
                     render_text(&text_attrib, ALIGN_CENTER,
-                        pw / 2, ts, ts, player->name);
+                            pw / 2, ts, ts, player->name);
                 }
             }
 
