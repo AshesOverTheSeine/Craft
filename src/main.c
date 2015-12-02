@@ -2637,6 +2637,10 @@ void reset_model() {
   g->time_changed = 1;
 }
 
+/*
+ * Reads the action to be re-bound, and takes the key input it is to be bound to,
+ * then saves the new configuration
+ */
 void change_key(int key) {
   switch (g->action) {
     case (0):
@@ -2682,9 +2686,11 @@ void change_key(int key) {
   save_controls();
 }
 
+/*
+ * Exports the controls as a text file
+ */
 void save_controls() {
   FILE *f = fopen(".controls.txt", "w");
-  // Load default if no file found
   if (f == NULL)
     return;
 
@@ -2699,30 +2705,32 @@ void save_controls() {
  * If no file exists, uses the defaults in config.h
  */
   void load_controls_txt() {
+    load_controls_default();
     FILE *f = fopen(".controls.txt", "r");
     char *line;
     char read;
     size_t len = 0;
     int index = 0;
 
-    // Load default controls if no file found
+    // Just load default controls if no file found
     if (f == NULL) {
-      load_controls_default();
       return;
     }
 
+    // Read the file line by line, loading each line as a bound key
     while ((read = getline(&line, &len, f)) != -1 && index < 12) {
       line[read-1] = '\0';
-      printf("%d\n", line);
       g->action = index;
-      change_key(line);
+      change_key(atoi(line));
       index++;
     }
-    printf("done\n");
 
     fclose(f);
   }
 
+/*
+ * The default values for the controls listed in config.h
+ */
 void load_controls_default() {
   c->key_forward = CRAFT_KEY_FORWARD;
   c->key_backward = CRAFT_KEY_BACKWARD;
