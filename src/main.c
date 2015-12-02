@@ -151,6 +151,8 @@ typedef struct {
     Block block1;
     Block copy0;
     Block copy1;
+    int changing_key;   // State of key binding: 0 = Normal gameplay, 1 = Awaiting input
+    int action;         // Which action is being re-bound. Valid options are 0-14
 } Model;
 
 typedef struct {
@@ -2042,7 +2044,6 @@ void tree(Block *block) {
 void parse_command(const char *buffer, int forward) {
     char username[128] = {0};
     char token[128] = {0};
-    char key[128] = {0};        // The key to be assigned to the chosen control
     char server_addr[MAX_ADDR_LENGTH];
     int server_port = DEFAULT_PORT;
     char filename[MAX_PATH_LENGTH];
@@ -2145,8 +2146,9 @@ void parse_command(const char *buffer, int forward) {
     else if (sscanf(buffer, "/cylinder %d", &radius) == 1) {
         cylinder(&g->block0, &g->block1, radius, 0);
     }
-    else if (sscanf(buffer, "/set %d %s", &action, key) == 2) {        // Takes command, value corresponding to the command, and the new key to be bound to
-        change_binding(action, key);
+    else if (sscanf(buffer, "/set %i", &action) == 1) {        // Takes action to be re-bound, in integer form
+        g->changing_key = 1;    // Puts game into changing key mode
+        g->action = action;     // Desired action is recorded
     }
     else if (forward) {
         client_talk(buffer);
@@ -2200,7 +2202,6 @@ void on_middle_click() {
 }
 
 void on_key(GLFWwindow *window, int key, int scancode, int action, int mods) {
-    printf("ON_KEY %i \n", key);       // DEBUG: See when this is called
     int control = mods & (GLFW_MOD_CONTROL | GLFW_MOD_SUPER);
     int exclusive =
         glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED;
@@ -2297,6 +2298,58 @@ void on_key(GLFWwindow *window, int key, int scancode, int action, int mods) {
         if (key == c->key_observe_inset) {
             g->observe2 = (g->observe2 + 1) % g->player_count;
         }
+    }
+    // Enter may not be bound, as otherwise it is set right after /set is entered; assuming nobody would bind Enter anyways
+    if (g->changing_key && key != GLFW_KEY_ENTER) {
+      printf("%i %i\n", key, g->action);
+      switch (g->action) {
+        case (0):
+          c->key_forward = key;
+          break;
+        case (1):
+          c->key_backward = key;
+          break;
+        case (2):
+          c->key_left = key;
+          break;
+        case (3):
+          c->key_right = key;
+          break;
+        case (4):
+          c->key_jump = key;
+          break;
+        case (5):
+          c->key_fly = key;
+          break;
+        case (6):
+          c->key_observe = key;
+          break;
+        case (7):
+          c->key_observe_inset = key;
+          break;
+        case (8):
+          c->key_item_next = key;
+          break;
+        case (9):
+          c->key_item_prev = key;
+          break;
+        case (10):
+          c->key_zoom = key;
+          break;
+        case (11):
+          c->key_ortho = key;
+          break;
+        case (12):
+          c->key_chat = key;
+          break;
+        case (13):
+          c->key_command = key;
+          break;
+        case (14):
+          c->key_sign = key;
+          break;
+      }
+        g->changing_key = 0;
     }
 }
 
@@ -2609,15 +2662,6 @@ void reset_model() {
     g->time_changed = 1;
 }
 
-/*
- * Allows the changing of keybindings 
- */
-void change_binding(int action, char *key) {
-    printf("Changing binding to %s\n", key);
-    c->key_forward = key;   // Will have switch statement for each action but for now just testing on one
-    printf("New Key: %c\n", &c->key_forward);   // TODO: This shows something different from the key
-}
-
 int main(int argc, char **argv) {
     // INITIALIZATION //
     curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -2656,7 +2700,6 @@ int main(int argc, char **argv) {
     glfwSwapInterval(VSYNC);
     glfwSetInputMode(g->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetKeyCallback(g->window, on_key);
-    printf("HOW?\n");
     glfwSetCharCallback(g->window, on_char);
     glfwSetMouseButtonCallback(g->window, on_mouse_button);
     glfwSetScrollCallback(g->window, on_scroll);
