@@ -1,3 +1,5 @@
-For this project, we wanted to add the ability to hold down the mouse buttons to repeatedly place/remove blocks, instead of having to click repeatedly, and to allow custom key-binding that persists between game sessions.
+For this project, we wanted to add the ability to hold down the mouse buttons to repeatedly place/remove blocks, instead of having to click repeatedly, and to allow custom key-binding that persists between game sessions. To set key binds, you may type "/set" to show all indexes in the console, and type "/set <int>" to have your next key press bound to the chosen action.
 
 All changes were made to main.c, in particular the on_mouse_click(), on_key(), load_controls_text(), load_controls_default(), save_controls(), change_key(), parse_command(), and main() functions. Almost all comments besides the TODO comments and header comments such as // INITIALIZATION // are mine, which should aid in finding the code that was added.
+
+Also, you'll see I accidentally pushed a change to main.c just now, but it was merely changing a print statement to be less ambiguous, as the change log will show. Also, while this certainly runs on Linux, and likely Mac, some Windows users have not been able to run this program (including the unmodified original).
