@@ -2163,7 +2163,7 @@ void parse_command(const char *buffer, int forward) {
     printf("8: Select Next Item\n");
     printf("9: Select Previous Item\n");
     printf("10: Zoom View\n");
-    printf("11: Ortho\n");
+    printf("11: Sky View\n");
   }
   // Takes action to be re-bound, in integer form
   else if (sscanf(buffer, "/set %i", &action) == 1) {
